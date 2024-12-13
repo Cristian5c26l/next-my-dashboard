@@ -1,24 +1,32 @@
-// Para llegar a esta pagina del pokemon, acceder a la url http://localhost:3000/dashboard/pokemon/idDinamico
+// Para llegar a esta pagina del pokemon, acceder a la url http://localhost:3000/dashboard/pokemons/nombrePokemon
 
-import { Pokemon } from "@/pokemons";
+import { Pokemon, PokemonsResponse } from "@/pokemons";
 import { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
 interface Props {
-  params: { id: string };
-  // searchParams: { age: string; name: string;};// Contiene los parámetros que están partir de "?" de, en este caso, la URL http://localhost:3000/dashboard/pokemon/idDinamico?age=14&name=nombre2
+  params: { name: string };
+  // searchParams: { age: string; id: string;};// Contiene los parámetros que están partir de "?" de, en este caso, la URL http://localhost:3000/dashboard/pokemons/nombre?age=14&id=ID
 }
 
 // Funcion generateStaticParams se ejecuta en Build Time (npm run build)
 export async function generateStaticParams() {
-  const static151Pokemons = Array.from({ length: 151 }).map((v, i) => ({ id: `${i + 1}` }));
-  return static151Pokemons;
-}
+
+    const res: PokemonsResponse = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=151`).then(res => res.json());
+    
+    const static151Pokemons = res.results.map(pokemon => ({
+        name: pokemon.name,
+    }))
+
+    // throw new Error('Este error no debería de suceder');
+
+    return static151Pokemons;
+}// En esta función se generan los parámetros {name: string} cuando se hace npm run build para que se generen las páginas estáticas de cada pokemon. Cada página estática generada va a lucir así: /dashboard/pokemons/nombrePokemon, donde nombrePokemon será el valor de la propiedad name de cada objeto del array static151Pokemons. Recordar que, por defecto, cuando estamos en una ruta dinamica como pokemons/[name], el valor de la propiedad name de params va a ser el valor de la parte dinámica del path, que, en este caso, es [name]. POR EJEMPLO, SI ACCEDEMOS A LA URL http://localhost:3000/dashboard/pokemons/pikachu, el valor de params.name va a ser "pikachu".
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const { id, name } = await getPokemon(params.id);
+    const { id, name } = await getPokemon(params.name);
 
     return {
       title: `#${id} - ${name}`, // Titulo de la pestaña de la pagina
@@ -33,9 +41,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-const getPokemon = async (id: string): Promise<Pokemon> => {
+const getPokemon = async (name: string): Promise<Pokemon> => {
   try {
-    const pokemon = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`, {
+    const pokemon = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`, {
       // cache: "no-store", // TODO: cambiar esto en un futuro
       // cache: "force-cache",
       next: {
@@ -48,12 +56,12 @@ const getPokemon = async (id: string): Promise<Pokemon> => {
     return pokemon;
   } catch (error) { // Este bloque se ejecuta cuando el fetch arroja un error
     console.log(error);
-    notFound();// Mostrar en la URL actual (que por ejemplo seria http://localhost:3000/dashboard/pokemon/idQueNoExiste) el componente NotFound de src/app/dashboard/pokemon/[id]/not-found.tsx o el componente de defecto src/app/not-found.tsx
+    notFound();// Mostrar en la URL actual (que por ejemplo seria http://localhost:3000/dashboard/pokemons/nombrePokemonQueNoExiste) el componente NotFound de src/app/dashboard/pokemons/[name]/not-found.tsx o el componente de defecto src/app/not-found.tsx
   }
 };
 
 export default async function PokemonPage({ params }: Props) {
-  const pokemon = await getPokemon(params.id);
+  const pokemon = await getPokemon(params.name);
 
   return (
     <div className="flex mt-5 flex-col items-center text-slate-800">
